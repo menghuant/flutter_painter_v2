@@ -12,6 +12,11 @@ Flutter Painter provides you with a widget that can be used to draw on it. Right
   - **Text** with any `TextStyle`.
   - **Shapes** such as lines, arrows, ovals and rectangles with any `Paint`.
   - **Images** that can be flipped.
+- **Advanced Arrow System**: Enhanced arrow functionality with:
+  - **Anchor Point Editing**: Drag arrow endpoints directly for precise positioning
+  - **Minimum Length Constraints**: Configurable minimum arrow length (32px default)
+  - **Dual Arrow Support**: Both single and double-headed arrows
+  - **Customizable Appearance**: Configurable anchor point size, colors, and borders
 - **Free-style eraser** to erase any part of a drawing or object you don't want on the painter.[*](#erasing)
 
 These are called **drawables**.
@@ -111,11 +116,12 @@ All setters on `PainterController` directly notify your `FlutterPainter` to resp
 
 ### Settings
 
-There are currently three types of settings:
+There are currently six types of settings:
 - `freeStyleSettings`: They control the parameters used in drawing scribbles, such as the width and color. It also has a field to enable/disable scribbles, to prevent the user from drawing on the `FlutterPainter`.
 - `textSettings`: They mainly control the `TextStyle` of the text being drawn. It also has a focus node field ([more on focus nodes here](https://flutter.dev/docs/cookbook/forms/focus)) to allow you to detect when the user starts and stops editing text.
-- `objectSettings`: These settings control objects that can be moved, scaled and rotated. Texts, shapes and images are all considered objects. It controls layout assist, which allows to center objects and rotate them at a right angle, and settings regarding the object controls for scaling, rotating and resizing.
+- `objectSettings`: These settings control objects that can be moved, scaled and rotated. Texts, shapes and images are all considered objects. It controls layout assist, which allows to center objects and rotate them at a right angle, and settings regarding the object controls for scaling, rotating and resizing. Also includes anchor point appearance settings for arrows.
 - `shapeSettings`: These control the paint and shape factory used (Shape Factory is used to create shapes), and whether the shape is drawn once or continiously.
+- `arrowSettings`: These control arrow-specific behavior, including minimum length constraints (32px default) to ensure arrows maintain usability.
 - `scaleSettings`: These settings control the scaling on the painter (zooming in/out). By default, scaling is disabled.
 
 You can provide initial settings for the things you want to draw through the settings parameter in the constructor of the `PainterController`.
@@ -201,6 +207,65 @@ void deselectObjectDrawable(){
 
 The selected object drawable will also be automatically update if it is replaced or removed from the controller.
 
+### Arrow System & Coordinates
+
+Flutter Painter V2 features an advanced arrow system with direct anchor point editing. Arrows can be created using `ArrowFactory` or `DoubleArrowFactory` and edited by dragging their endpoints.
+
+#### Drawing Arrows
+
+```dart
+// Setup arrow drawing
+final controller = PainterController(
+  settings: PainterSettings(
+    shape: ShapeSettings(
+      factory: ArrowFactory(arrowHeadSize: 20), // or DoubleArrowFactory
+      paint: Paint()
+        ..color = Colors.black
+        ..strokeWidth = 5.0
+        ..style = PaintingStyle.stroke,
+    ),
+    arrow: ArrowSettings(
+      minimumLength: 32.0, // Configurable minimum length
+    ),
+  ),
+);
+```
+
+#### Accessing Arrow Coordinates
+
+All arrow coordinates are stored in **canvas coordinate system** (relative to FlutterPainter widget):
+
+```dart
+// Get arrows from controller
+final arrows = controller.value.drawables
+    .where((d) => d is ArrowDrawable)
+    .cast<ArrowDrawable>();
+
+for (final arrow in arrows) {
+  // Center position in canvas coordinates
+  Offset centerPosition = arrow.position;
+  
+  // Get start/end anchor positions in canvas coordinates
+  final anchors = ArrowAnchorDragHelper.calculateAnchorPositions(arrow);
+  Offset startPoint = anchors['start']!;
+  Offset endPoint = anchors['end']!;
+  
+  // Other properties
+  double length = arrow.length;           // Canvas units (logical pixels)
+  double rotation = arrow.rotationAngle;  // Radians
+  double scale = arrow.scale;
+}
+```
+
+#### Coordinate System Details
+
+- **Primary System**: Canvas coordinates (FlutterPainter widget space)
+- **Origin**: Top-left corner of FlutterPainter widget
+- **Units**: Logical pixels
+- **Scale**: 1:1 with widget size
+- **Background Independence**: Arrow coordinates are independent of background images
+
+If you need coordinates relative to a background image, you'll need to perform coordinate transformation using the canvas size, image size, and display scaling factors.
 
 ### Rendering Image
 
