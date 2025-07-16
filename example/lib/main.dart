@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_painter_v2/flutter_painter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,119 +8,239 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter Painter Arrow Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const ArrowPainterDemo(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class ArrowPainterDemo extends StatefulWidget {
+  const ArrowPainterDemo({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<ArrowPainterDemo> createState() => _ArrowPainterDemoState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
+  late PainterController _controller;
+  bool _isDoubleArrow = false;
+  Color _arrowColor = Colors.black;
+  double _strokeWidth = 2.0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _controller = PainterController(
+      settings: PainterSettings(
+        object: ObjectSettings(
+          layoutAssist: ObjectLayoutAssistSettings(
+            enabled: false,
+          ),
+        ),
+        shape: ShapeSettings(
+          factory: ArrowFactory(),
+          paint: Paint()
+            ..color = _arrowColor
+            ..strokeWidth = _strokeWidth
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _updateArrowSettings() {
+    _controller.settings = _controller.settings.copyWith(
+      shape: ShapeSettings(
+        factory: _isDoubleArrow ? DoubleArrowFactory() : ArrowFactory(),
+        paint: Paint()
+          ..color = _arrowColor
+          ..strokeWidth = _strokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round,
+      ),
+    );
+  }
+
+  void _clearCanvas() {
+    _controller.clearDrawables();
+  }
+
+  void _undo() {
+    _controller.undo();
+  }
+
+  void _redo() {
+    _controller.redo();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
+        title: const Text('Flutter Painter Arrow Demo'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            onPressed: _undo,
+            tooltip: 'Undo',
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            onPressed: _redo,
+            tooltip: 'Redo',
+          ),
+          IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: _clearCanvas,
+            tooltip: 'Clear Canvas',
+          ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Column(
+        children: [
+          // Drawing Canvas
+          Expanded(
+            child: Container(
+              color: Colors.grey[100],
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    color: Colors.white,
+                    child: FlutterPainter(
+                      controller: _controller,
+                    ),
+                  ),
+                ),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          // Controls
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
-          ],
-        ),
+            child: Column(
+              children: [
+                // Arrow Type Selection
+                Row(
+                  children: [
+                    const Text('Arrow Type: '),
+                    const SizedBox(width: 16),
+                    ChoiceChip(
+                      label: const Text('Single Arrow'),
+                      selected: !_isDoubleArrow,
+                      onSelected: (selected) {
+                        setState(() {
+                          _isDoubleArrow = false;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Double Arrow'),
+                      selected: _isDoubleArrow,
+                      onSelected: (selected) {
+                        setState(() {
+                          _isDoubleArrow = true;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Color Selection
+                Row(
+                  children: [
+                    const Text('Color: '),
+                    const SizedBox(width: 16),
+                    ...[
+                      Colors.black,
+                      Colors.red,
+                      Colors.blue,
+                      Colors.green,
+                      Colors.orange,
+                      Colors.purple,
+                    ].map((color) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _arrowColor = color;
+                                _updateArrowSettings();
+                              });
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: color,
+                                border: Border.all(
+                                  color: _arrowColor == color
+                                      ? Colors.black
+                                      : Colors.grey,
+                                  width: _arrowColor == color ? 3 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Stroke Width
+                Row(
+                  children: [
+                    const Text('Stroke Width: '),
+                    Expanded(
+                      child: Slider(
+                        value: _strokeWidth,
+                        min: 1.0,
+                        max: 10.0,
+                        divisions: 9,
+                        label: _strokeWidth.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() {
+                            _strokeWidth = value;
+                            _updateArrowSettings();
+                          });
+                        },
+                      ),
+                    ),
+                    Text(_strokeWidth.toStringAsFixed(1)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
