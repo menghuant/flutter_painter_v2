@@ -6,3 +6,4 @@ export 'haptic_feedback_settings.dart';
 export 'shape_settings.dart';
 export 'scale_settings.dart';
 export 'anchor_point_settings.dart';
+export 'arrow_settings.dart';

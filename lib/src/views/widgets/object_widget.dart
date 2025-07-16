@@ -638,6 +638,10 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
   FreeStyleSettings get freeStyleSettings =>
       PainterController.of(context).value.settings.freeStyle;
 
+  /// Getter for the [ArrowSettings] from the controller to make code more readable.
+  ArrowSettings get arrowSettings =>
+      PainterController.of(context).value.settings.arrow;
+
   /// Triggers when the user taps an empty space.
   ///
   /// Deselects the selected object drawable.
@@ -1215,20 +1219,12 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
     required String anchorType,
     required Offset draggedPosition,
   }) {
-    final fixedAnchorPosition = _fixedAnchorPosition!;
-    
-    // Determine start and end positions
-    final newStart = anchorType == 'start' ? draggedPosition : fixedAnchorPosition;
-    final newEnd = anchorType == 'start' ? fixedAnchorPosition : draggedPosition;
-    
-    // Calculate arrow properties
-    final dx = newEnd.dx - newStart.dx;
-    final dy = newEnd.dy - newStart.dy;
-    final length = math.sqrt(dx * dx + dy * dy);
-    final rotation = math.atan2(dy, dx);
-    final position = Offset((newStart.dx + newEnd.dx) / 2, (newStart.dy + newEnd.dy) / 2);
-    
-    return (position: position, length: length, rotation: rotation);
+    return ArrowAnchorDragHelper.enforceMinimumLength(
+      anchorType: anchorType,
+      draggedPosition: draggedPosition,
+      fixedAnchorPosition: _fixedAnchorPosition!,
+      minimumLength: arrowSettings.minimumLength,
+    );
   }
 
   /// A callback that is called when a transformation occurs in the [InteractiveViewer] in the widget tree.

@@ -21,6 +21,9 @@ class PainterSettings {
   /// Settings for canvas scaling.
   final ScaleSettings scale;
 
+  /// Settings for arrow drawables.
+  final ArrowSettings arrow;
+
   /// Creates a [PainterSettings] with the given settings for [freeStyle], [object]
   /// and [text].
   const PainterSettings({
@@ -29,6 +32,7 @@ class PainterSettings {
     this.text = const TextSettings(),
     this.shape = const ShapeSettings(),
     this.scale = const ScaleSettings(),
+    this.arrow = const ArrowSettings(),
   });
 
   /// Creates a copy of this but with the given fields replaced with the new values.
@@ -38,6 +42,7 @@ class PainterSettings {
     TextSettings? text,
     ShapeSettings? shape,
     ScaleSettings? scale,
+    ArrowSettings? arrow,
   }) {
     return PainterSettings(
       text: text ?? this.text,
@@ -45,6 +50,7 @@ class PainterSettings {
       freeStyle: freeStyle ?? this.freeStyle,
       shape: shape ?? this.shape,
       scale: scale ?? this.scale,
+      arrow: arrow ?? this.arrow,
     );
   }
 }

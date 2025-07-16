@@ -128,13 +128,21 @@ Replace the existing arrow rectangle selection box system with a two-draggable a
 ---
 
 ### Stage 3: Arrow Body Translation Functionality
-**Objective**: Implement dragging arrow body for overall translation
+**Objective**: ~~Implement dragging arrow body for overall translation~~ **SKIPPED - Existing system sufficient**
+
+**Decision**: The existing bounding box dragging system already provides adequate arrow body translation functionality. Users can drag the arrow body to translate the entire arrow without affecting its length or rotation. The anchor point system works seamlessly with the existing translation mechanism.
+
+**Existing Functionality**:
+- Arrow body can be dragged using the standard object selection and drag system
+- Bounding box appears when arrow is selected (outside of anchor points)
+- Translation preserves arrow length and rotation angle
+- Anchor points correctly follow during translation
 
 **Implementation Steps**:
-1. Distinguish between anchor point dragging and arrow body dragging
-2. Implement arrow body translation logic
-3. Ensure anchor point positions sync during translation
-4. Handle drag area detection
+~~1. Distinguish between anchor point dragging and arrow body dragging~~ **Not needed - existing system handles this**
+~~2. Implement arrow body translation logic~~ **Already exists**
+~~3. Ensure anchor point positions sync during translation~~ **Already working**
+~~4. Handle drag area detection~~ **Already implemented**
 
 **Testing Method**:
 - Dragging arrow body should translate entire arrow
@@ -142,7 +150,7 @@ Replace the existing arrow rectangle selection box system with a two-draggable a
 - Translation should not change arrow length and angle
 
 **Acceptance Criteria**:
-- ✅ Can drag arrow body for translation
+- ✅ Can drag arrow body for translation (via existing bounding box system)
 - ✅ Anchor point positions sync correctly during translation
 - ✅ Translation does not affect arrow length and angle
 - ✅ Drag area detection correct (distinguish anchor points from body)
@@ -153,21 +161,46 @@ Replace the existing arrow rectangle selection box system with a two-draggable a
 **Objective**: Implement arrow minimum length constraint functionality
 
 **Implementation Steps**:
-1. Add minimum length setting to `AnchorPointSettings`
-2. Modify anchor point dragging logic to include length checking
-3. Implement behavior when minimum length is reached
-4. Add visual feedback prompts
+1. ✅ Create `ArrowSettings` class (`lib/src/controllers/settings/arrow_settings.dart`)
+   - Add `minimumLength` property (default: 32.0px)
+   - Immutable design with copyWith() method
+   - Documentation explaining anchor action area relationship
+
+2. ✅ Integrate into settings system
+   - Add `ArrowSettings arrow` field to `PainterSettings`
+   - Update constructor and copyWith() method
+   - Export in settings.dart
+
+3. ✅ Modify creation logic (`lib/src/views/widgets/shape_widget.dart`)
+   - Check minimum length during shape creation (onScaleUpdate)
+   - Apply constraint to ArrowDrawable and DoubleArrowDrawable
+   - Use choice A: adjust length during creation to avoid visual jumps
+
+4. ✅ Modify anchor dragging logic (`lib/src/views/widgets/object_widget.dart`)
+   - Update `_calculateArrowFromAnchorDrag` to use helper method
+   - Add `arrowSettings` getter for easy access
+   - Maintain fixed anchor position while enforcing minimum length
+
+5. ✅ Extend helper methods (`lib/src/helpers/arrow_anchor_drag_helper.dart`)
+   - Add `enforceMinimumLength` static method
+   - Handle minimum length constraint calculations
+   - Support both start/end anchor drag scenarios
+   - Recalculate positions based on fixed anchor and minimum length
 
 **Testing Method**:
 - Drag anchor points to make arrow shorter than minimum length
 - Arrow should maintain minimum length
 - Anchor point positions should follow dragging (visual separation)
+- Factory creation should respect minimum length constraint
 
 **Acceptance Criteria**:
-- ✅ Minimum length constraint is effective
+- ✅ Minimum length constraint is effective (32px default)
 - ✅ Arrow maintains minimum length when limit is reached
-- ✅ Anchor point positions still follow dragging
+- ✅ Anchor point positions still follow dragging visually
 - ✅ Minimum length can be adjusted through settings
+- ✅ Factory creation respects minimum length constraint
+- ✅ Both ArrowDrawable and DoubleArrowDrawable support constraint
+- ✅ Helper method provides clean separation of concerns
 
 ---
 
@@ -309,8 +342,13 @@ Replace the existing arrow rectangle selection box system with a two-draggable a
 - **Supported Types**: Single arrow and double arrow
 
 ### Configuration Settings
-Anchor point settings will be added to `ObjectSettings`, including:
-- Anchor point size (diameter)
-- Anchor point color
-- Anchor point border color and width
-- Arrow minimum length
+Settings are organized across multiple classes:
+
+**ObjectSettings** (for anchor point appearance):
+- Anchor point size (diameter): 16px default
+- Anchor point color: White default
+- Anchor point border color and width: Grey, 2px default
+
+**ArrowSettings** (for arrow behavior):
+- Arrow minimum length: 32px default (= anchor action area diameter)
+- Configurable through PainterController settings

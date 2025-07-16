@@ -23,6 +23,10 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
   ShapeSettings get settings =>
       PainterController.of(context).value.settings.shape;
 
+  /// Getter for arrow settings to simplify code.
+  ArrowSettings get arrowSettings =>
+      PainterController.of(context).value.settings.arrow;
+
   @override
   Widget build(BuildContext context) {
     final controller = PainterController.of(context);
@@ -69,9 +73,17 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
       final newLine = (details.localFocalPoint - startingPosition);
       final newPosition = startingPosition +
           Offset.fromDirection(newLine.direction, newLine.distance / 2);
+      // Apply minimum length constraint for arrows
+      double finalLength = newLine.distance.abs();
+      if (sized1DDrawable is ArrowDrawable || sized1DDrawable is DoubleArrowDrawable) {
+        finalLength = finalLength < arrowSettings.minimumLength 
+            ? arrowSettings.minimumLength 
+            : finalLength;
+      }
+      
       final newDrawable = sized1DDrawable.copyWith(
         position: newPosition,
-        length: newLine.distance.abs(),
+        length: finalLength,
         rotation: newLine.direction,
       );
       currentShapeDrawable = (newDrawable as ShapeDrawable);
