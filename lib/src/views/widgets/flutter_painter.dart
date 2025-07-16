@@ -21,6 +21,7 @@ import '../painters/painter.dart';
 import '../../controllers/painter_controller.dart';
 import '../../controllers/helpers/border_box_shadow.dart';
 import '../../extensions/painter_controller_helper_extension.dart';
+import '../../helpers/arrow_anchor_drag_helper.dart';
 import 'painter_controller_widget.dart';
 import 'dart:math' as math;
 

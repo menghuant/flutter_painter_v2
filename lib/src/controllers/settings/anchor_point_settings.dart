@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 class AnchorPointSettings {
   /// The size (diameter) of the anchor point in pixels.
   ///
-  /// Defaults to 15.0.
+  /// Defaults to 16.0.
   final double size;
 
   /// The color of the anchor point.
@@ -28,7 +28,7 @@ class AnchorPointSettings {
 
   /// Creates an [AnchorPointSettings] with the given parameters.
   const AnchorPointSettings({
-    this.size = 15.0,
+    this.size = 16.0,
     this.color = Colors.white,
     this.borderColor = Colors.grey,
     this.borderWidth = 2.0,
