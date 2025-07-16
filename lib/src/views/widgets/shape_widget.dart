@@ -25,7 +25,15 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (settings.factory == null) return widget.child;
+    final controller = PainterController.of(context);
+    final selectedDrawable = controller.selectedObjectDrawable;
+    
+    // Disable shape creation when factory is null or when an arrow is selected
+    if (settings.factory == null || 
+        (selectedDrawable != null && 
+         (selectedDrawable is ArrowDrawable || selectedDrawable is DoubleArrowDrawable))) {
+      return widget.child;
+    }
 
     return GestureDetector(
       onScaleStart: onScaleStart,

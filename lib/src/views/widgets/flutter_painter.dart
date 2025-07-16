@@ -15,6 +15,8 @@ import '../../controllers/events/events.dart';
 import '../../controllers/drawables/text_drawable.dart';
 import '../../controllers/drawables/path/path_drawables.dart';
 import '../../controllers/settings/settings.dart';
+import '../../controllers/drawables/shape/arrow_drawable.dart';
+import '../../controllers/drawables/shape/double_arrow_drawable.dart';
 import '../painters/painter.dart';
 import '../../controllers/painter_controller.dart';
 import '../../controllers/helpers/border_box_shadow.dart';

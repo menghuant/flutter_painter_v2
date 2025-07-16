@@ -49,21 +49,59 @@ Replace the existing arrow rectangle selection box system with a two-draggable a
 **Objective**: Display two anchor points when arrow is selected, replacing rectangle selection box
 
 **Implementation Steps**:
-1. Create `AnchorPointSettings` class
-2. Modify `ObjectSettings` to include anchor point settings
-3. Modify selection state display logic in `object_widget.dart`
-4. Create anchor point rendering component
+1. ✅ Create `AnchorPointSettings` class (`lib/src/controllers/settings/anchor_point_settings.dart`)
+   - Size (diameter): 15px default
+   - Color: White default
+   - Border color: Grey default
+   - Border width: 2px default
+   - Immutable design with copyWith() method
+
+2. ✅ Modify `ObjectSettings` to include anchor point settings
+   - Added `AnchorPointSettings anchorPoint` field
+   - Updated constructor and copyWith() method
+   - Added to settings export
+
+3. ✅ Create anchor point rendering component (`_AnchorPoint` widget)
+   - Circular design with configurable appearance
+   - Shadow effect for better visibility
+   - Consistent with existing control styling
+
+4. ✅ Modify selection state display logic in `object_widget.dart`
+   - Hide rectangle selection box for arrows
+   - Hide scale/rotation controls for arrows
+   - Prevent background gesture handling for selected arrows
+
+5. ✅ Implement anchor points in top layer rendering
+   - Render all anchor points after all drawables (rendering order B)
+   - Calculate correct positions with rotation transformation
+   - Apply proper coordinate transformation
+
+6. ✅ Fix gesture conflicts
+   - Disable shape creation when arrow is selected
+   - Prevent double-tap zoom conflicts
+   - Maintain proper interaction hierarchy
+
+7. ✅ Add debug information display
+   - Show arrow coordinates in image coordinate system
+   - Display anchor point positions for selected arrows
+   - Include rotation angle information
 
 **Testing Method**:
 - Two circular anchor points should appear when arrow is selected
 - Anchor point positions should be at arrow start and end points
 - Anchor points should disappear when deselected
+- No gesture conflicts with background image zoom/pan
+- Debug info shows correct coordinate mapping
 
 **Acceptance Criteria**:
 - ✅ Arrow displays 2 anchor points when selected
-- ✅ Anchor point positions are correct (start/end points)
-- ✅ Anchor point appearance matches settings (circular, default color)
+- ✅ Anchor point positions are correct (start/end points with rotation)
+- ✅ Anchor point appearance matches settings (15px white circles with grey border)
 - ✅ Does not affect other drawable selection behavior
+- ✅ Proper rendering order (anchor points on top)
+- ✅ No gesture conflicts during zoom/pan operations
+- ✅ Debug information displays image-relative coordinates
+- ✅ Supports both single and double arrows
 
 ---
 

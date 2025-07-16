@@ -140,9 +140,11 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
   @override
   Widget build(BuildContext context) {
     final drawables = this.drawables;
+    final selectedDrawable = controller?.selectedObjectDrawable;
     final drawableAirTransformable =
-        controller?.selectedObjectDrawable != null &&
-            controller?.shapeSettings.factory == null;
+        selectedDrawable != null &&
+            controller?.shapeSettings.factory == null &&
+            !(selectedDrawable is ArrowDrawable || selectedDrawable is DoubleArrowDrawable);
     final selectedDrawableEntry = drawableAirTransformable
         ? MapEntry<int, ObjectDrawable>(
             drawables.indexOf(controller!.selectedObjectDrawable!),
@@ -211,54 +213,57 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                                   ? Stack(
                                       children: [
                                         widget,
-                                        Positioned(
-                                          top: objectPadding -
-                                              (controlsSize / 2),
-                                          bottom: objectPadding -
-                                              (controlsSize / 2),
-                                          left: objectPadding -
-                                              (controlsSize / 2),
-                                          right: objectPadding -
-                                              (controlsSize / 2),
-                                          child: Builder(
-                                            builder: (context) {
-                                              if (usingHtmlRenderer) {
+                                        // Show selection box for non-arrow drawables
+                                        if (!(drawable is ArrowDrawable || drawable is DoubleArrowDrawable))
+                                          Positioned(
+                                            top: objectPadding -
+                                                (controlsSize / 2),
+                                            bottom: objectPadding -
+                                                (controlsSize / 2),
+                                            left: objectPadding -
+                                                (controlsSize / 2),
+                                            right: objectPadding -
+                                                (controlsSize / 2),
+                                            child: Builder(
+                                              builder: (context) {
+                                                if (usingHtmlRenderer) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                          color: Colors.black,
+                                                          width:
+                                                              selectedBorderWidth),
+                                                    ),
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
+                                                            color: Colors.white,
+                                                            width:
+                                                                selectedBorderWidth),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
                                                 return Container(
                                                   decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors.black,
-                                                        width:
-                                                            selectedBorderWidth),
-                                                  ),
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
                                                       border: Border.all(
                                                           color: Colors.white,
                                                           width:
                                                               selectedBorderWidth),
-                                                    ),
-                                                  ),
+                                                      boxShadow: [
+                                                        BorderBoxShadow(
+                                                          color: Colors.black,
+                                                          blurRadius:
+                                                              selectedBlurRadius,
+                                                        )
+                                                      ]),
                                                 );
-                                              }
-                                              return Container(
-                                                decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors.white,
-                                                        width:
-                                                            selectedBorderWidth),
-                                                    boxShadow: [
-                                                      BorderBoxShadow(
-                                                        color: Colors.black,
-                                                        blurRadius:
-                                                            selectedBlurRadius,
-                                                      )
-                                                    ]),
-                                              );
-                                            },
+                                              },
+                                            ),
                                           ),
-                                        ),
                                         if (settings
-                                            .showScaleRotationControlsResolver()) ...[
+                                            .showScaleRotationControlsResolver() && 
+                                            !(drawable is ArrowDrawable || drawable is DoubleArrowDrawable)) ...[
                                           Positioned(
                                             top: objectPadding - (controlsSize),
                                             left:
@@ -382,7 +387,8 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                                             ),
                                           ),
                                         ],
-                                        if (entry.value is Sized2DDrawable) ...[
+                                        if (entry.value is Sized2DDrawable && 
+                                            !(drawable is ArrowDrawable || drawable is DoubleArrowDrawable)) ...[
                                           Positioned(
                                             top: objectPadding - (controlsSize),
                                             left: (size.width / 2) +
@@ -539,28 +545,48 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
               ),
             );
           }),
-          // if(selectedDrawableIndex != null)
-          //   ...[
-          //     Positioned(
-          //
-          //       child: Container(
-          //         decoration: BoxDecoration(
-          //             border:  Border.all(
-          //               color: Colors.white,
-          //               width: 2,
-          //             ),
-          //             boxShadow: [
-          //               BorderBoxShadow(
-          //                 color: Colors.black,
-          //                 blurRadius: 1,
-          //               )
-          //             ]
-          //         ),
-          //         width: size.width,
-          //         height: size.height,
-          //       ),
-          //     )
-          //   ]
+          // Render anchor points for selected arrows on top layer
+          ...drawables.asMap().entries.where((entry) {
+            final drawable = entry.value;
+            final selected = drawable == controller?.selectedObjectDrawable;
+            return selected && (drawable is ArrowDrawable || drawable is DoubleArrowDrawable);
+          }).map((entry) {
+            final drawable = entry.value as Sized1DDrawable;
+            final anchorSettings = settings.anchorPoint;
+            
+            // Calculate arrow start and end points with rotation
+            final startPoint = drawable.position.translate(-drawable.length / 2 * drawable.scale, 0);
+            final endPoint = drawable.position.translate(drawable.length / 2 * drawable.scale, 0);
+            
+            // Apply rotation transformation
+            final cos = math.cos(drawable.rotationAngle);
+            final sin = math.sin(drawable.rotationAngle);
+            
+            final rotatedStart = Offset(
+              drawable.position.dx + (startPoint.dx - drawable.position.dx) * cos - (startPoint.dy - drawable.position.dy) * sin,
+              drawable.position.dy + (startPoint.dx - drawable.position.dx) * sin + (startPoint.dy - drawable.position.dy) * cos,
+            );
+            
+            final rotatedEnd = Offset(
+              drawable.position.dx + (endPoint.dx - drawable.position.dx) * cos - (endPoint.dy - drawable.position.dy) * sin,
+              drawable.position.dy + (endPoint.dx - drawable.position.dx) * sin + (endPoint.dy - drawable.position.dy) * cos,
+            );
+            
+            return [
+              // Start point anchor
+              Positioned(
+                left: rotatedStart.dx - anchorSettings.size / 2,
+                top: rotatedStart.dy - anchorSettings.size / 2,
+                child: _AnchorPoint(settings: anchorSettings),
+              ),
+              // End point anchor
+              Positioned(
+                left: rotatedEnd.dx - anchorSettings.size / 2,
+                top: rotatedEnd.dy - anchorSettings.size / 2,
+                child: _AnchorPoint(settings: anchorSettings),
+              ),
+            ];
+          }).expand((anchors) => anchors),
         ],
       );
     });
@@ -1099,6 +1125,41 @@ class _ObjectControlBox extends StatelessWidget {
             color: shadowColor,
             blurRadius: 2,
           )
+        ],
+      ),
+    );
+  }
+}
+
+/// A circular anchor point widget for arrows.
+class _AnchorPoint extends StatelessWidget {
+  /// The anchor point settings that control appearance.
+  final AnchorPointSettings settings;
+
+  /// Creates an [_AnchorPoint] with the given [settings].
+  const _AnchorPoint({
+    Key? key,
+    required this.settings,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: settings.size,
+      height: settings.size,
+      decoration: BoxDecoration(
+        color: settings.color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: settings.borderColor,
+          width: settings.borderWidth,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
         ],
       ),
     );

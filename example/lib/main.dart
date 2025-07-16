@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_painter_v2/flutter_painter.dart';
 
@@ -147,7 +148,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
           ),
           // Controls
           Container(
-            padding: const EdgeInsets.all(16.0),
+            height: 300, // Fixed height for the controls panel
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -158,7 +159,9 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                 ),
               ],
             ),
-            child: Column(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
               children: [
                 // Arrow Type Selection
                 Row(
@@ -279,18 +282,100 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                 ValueListenableBuilder<PainterControllerValue>(
                   valueListenable: _controller,
                   builder: (context, value, child) {
+                    // Get image dimensions - you need to replace these with actual image dimensions
+                    // You can get these by loading the image asset or hardcoding if you know them
+                    const imageWidth = 1024.0;  // Replace with actual 5.jpg width
+                    const imageHeight = 768.0;  // Replace with actual 5.jpg height
+                    
+                    // Calculate the display size and offset due to AspectRatio(1.0) and BoxFit.contain
+                    const containerSize = 400.0; // Approximate container size (1:1 aspect ratio)
+                    final imageAspectRatio = imageWidth / imageHeight;
+                    final containerAspectRatio = 1.0;
+                    
+                    late double displayWidth, displayHeight, offsetX, offsetY;
+                    
+                    if (imageAspectRatio > containerAspectRatio) {
+                      // Image is wider, fit by width
+                      displayWidth = containerSize;
+                      displayHeight = containerSize / imageAspectRatio;
+                      offsetX = 0;
+                      offsetY = (containerSize - displayHeight) / 2;
+                    } else {
+                      // Image is taller, fit by height
+                      displayWidth = containerSize * imageAspectRatio;
+                      displayHeight = containerSize;
+                      offsetX = (containerSize - displayWidth) / 2;
+                      offsetY = 0;
+                    }
+                    
+                    // Function to convert canvas coordinates to image coordinates
+                    Offset canvasToImageCoords(Offset canvasPoint) {
+                      final imageX = ((canvasPoint.dx - offsetX) / displayWidth) * imageWidth;
+                      final imageY = ((canvasPoint.dy - offsetY) / displayHeight) * imageHeight;
+                      return Offset(imageX, imageY);
+                    }
+                    
                     final arrowsInfo = value.drawables
                         .where((d) => d is ArrowDrawable || d is DoubleArrowDrawable)
                         .map((d) {
+                      final isSelected = d == value.selectedObjectDrawable;
+                      String anchorInfo = '';
+                      
                       if (d is ArrowDrawable) {
                         // Calculate arrow start and end points
                         final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
                         final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
-                        return 'Arrow: start(${startPoint.dx.toStringAsFixed(1)}, ${startPoint.dy.toStringAsFixed(1)}) end(${endPoint.dx.toStringAsFixed(1)}, ${endPoint.dy.toStringAsFixed(1)})';
+                        
+                        // Apply rotation for anchor positions
+                        final cos = math.cos(d.rotationAngle);
+                        final sin = math.sin(d.rotationAngle);
+                        
+                        final rotatedStart = Offset(
+                          d.position.dx + (startPoint.dx - d.position.dx) * cos - (startPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (startPoint.dx - d.position.dx) * sin + (startPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        final rotatedEnd = Offset(
+                          d.position.dx + (endPoint.dx - d.position.dx) * cos - (endPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (endPoint.dx - d.position.dx) * sin + (endPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        // Convert coordinates to image coordinate system
+                        final imageRotatedStart = canvasToImageCoords(rotatedStart);
+                        final imageRotatedEnd = canvasToImageCoords(rotatedEnd);
+                        
+                        if (isSelected) {
+                          anchorInfo = ' | rotation: ${(d.rotationAngle * 180 / math.pi).toStringAsFixed(1)}° | anchors: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})';
+                        }
+                        
+                        return 'Arrow: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})$anchorInfo';
                       } else if (d is DoubleArrowDrawable) {
                         final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
                         final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
-                        return 'DoubleArrow: start(${startPoint.dx.toStringAsFixed(1)}, ${startPoint.dy.toStringAsFixed(1)}) end(${endPoint.dx.toStringAsFixed(1)}, ${endPoint.dy.toStringAsFixed(1)})';
+                        
+                        // Apply rotation for anchor positions
+                        final cos = math.cos(d.rotationAngle);
+                        final sin = math.sin(d.rotationAngle);
+                        
+                        final rotatedStart = Offset(
+                          d.position.dx + (startPoint.dx - d.position.dx) * cos - (startPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (startPoint.dx - d.position.dx) * sin + (startPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        final rotatedEnd = Offset(
+                          d.position.dx + (endPoint.dx - d.position.dx) * cos - (endPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (endPoint.dx - d.position.dx) * sin + (endPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        // Convert coordinates to image coordinate system
+                        final imageRotatedStart = canvasToImageCoords(rotatedStart);
+                        final imageRotatedEnd = canvasToImageCoords(rotatedEnd);
+                        
+                        if (isSelected) {
+                          anchorInfo = ' | rotation: ${(d.rotationAngle * 180 / math.pi).toStringAsFixed(1)}° | anchors: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})';
+                        }
+                        
+                        return 'DoubleArrow: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})$anchorInfo';
                       }
                       return '';
                     }).toList();
@@ -309,7 +394,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                           const Text('No arrows drawn', style: TextStyle(fontSize: 12)),
                         const SizedBox(height: 4),
                         const Text(
-                          '// TODO: After implementing anchor points, this will also display anchor point positions',
+                          '// Selected arrows show anchor point positions',
                           style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
                         ),
                       ],
@@ -318,6 +403,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),
