@@ -23,9 +23,21 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
   ShapeSettings get settings =>
       PainterController.of(context).value.settings.shape;
 
+  /// Getter for arrow settings to simplify code.
+  ArrowSettings get arrowSettings =>
+      PainterController.of(context).value.settings.arrow;
+
   @override
   Widget build(BuildContext context) {
-    if (settings.factory == null) return widget.child;
+    final controller = PainterController.of(context);
+    final selectedDrawable = controller.selectedObjectDrawable;
+    
+    // Disable shape creation when factory is null or when an arrow is selected
+    if (settings.factory == null || 
+        (selectedDrawable != null && 
+         (selectedDrawable is ArrowDrawable || selectedDrawable is DoubleArrowDrawable))) {
+      return widget.child;
+    }
 
     return GestureDetector(
       onScaleStart: onScaleStart,
@@ -39,8 +51,15 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
     final factory = settings.factory;
     if (factory == null || details.pointerCount > 1) return;
 
-    final shapeDrawable =
+    var shapeDrawable =
         factory.create(details.localFocalPoint, settings.paint);
+
+    // Apply arrow settings if this is an arrow drawable
+    if (shapeDrawable is ArrowDrawable) {
+      shapeDrawable = shapeDrawable.copyWith(arrowSettings: arrowSettings);
+    } else if (shapeDrawable is DoubleArrowDrawable) {
+      shapeDrawable = shapeDrawable.copyWith(arrowSettings: arrowSettings);
+    }
 
     setState(() {
       PainterController.of(context).addDrawables([shapeDrawable]);
@@ -61,11 +80,36 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
       final newLine = (details.localFocalPoint - startingPosition);
       final newPosition = startingPosition +
           Offset.fromDirection(newLine.direction, newLine.distance / 2);
-      final newDrawable = sized1DDrawable.copyWith(
-        position: newPosition,
-        length: newLine.distance.abs(),
-        rotation: newLine.direction,
-      );
+      // Apply minimum length constraint for arrows
+      double finalLength = newLine.distance.abs();
+      if (sized1DDrawable is ArrowDrawable || sized1DDrawable is DoubleArrowDrawable) {
+        finalLength = finalLength < arrowSettings.minimumLength 
+            ? arrowSettings.minimumLength 
+            : finalLength;
+      }
+      
+      ObjectDrawable newDrawable;
+      if (sized1DDrawable is ArrowDrawable) {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+          arrowSettings: arrowSettings,
+        );
+      } else if (sized1DDrawable is DoubleArrowDrawable) {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+          arrowSettings: arrowSettings,
+        );
+      } else {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+        );
+      }
       currentShapeDrawable = (newDrawable as ShapeDrawable);
       updateDrawable(sized1DDrawable, newDrawable);
     } else if (shapeDrawable is Sized2DDrawable) {

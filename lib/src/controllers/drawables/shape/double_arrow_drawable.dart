@@ -6,6 +6,7 @@ import '../object_drawable.dart';
 import 'shape_drawable.dart';
 import '../sized1ddrawable.dart';
 import '../../../extensions/paint_copy_extension.dart';
+import '../../settings/arrow_settings.dart';
 
 /// A drawable of a arrow on both side shape.
 class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
@@ -13,15 +14,13 @@ class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
   @override
   Paint paint;
 
-  /// The size of the arrow head.
-  ///
-  /// If null, the arrow head size will be 3 times the [paint] strokeWidth.
-  double? arrowHeadSize;
+  /// Arrow-specific settings for outline and behavior.
+  ArrowSettings arrowSettings;
 
-  /// Creates a new [DoubleArrowDrawable] with the given [length], [paint] and [arrowHeadSize].
+  /// Creates a new [DoubleArrowDrawable] with the given [length], [paint] and [arrowSettings].
   DoubleArrowDrawable({
     Paint? paint,
-    this.arrowHeadSize,
+    this.arrowSettings = const ArrowSettings(),
     required double length,
     required Offset position,
     double rotationAngle = 0,
@@ -43,16 +42,20 @@ class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
             hidden: hidden);
 
   /// The actual arrow head size used in drawing.
-  double get _arrowHeadSize => arrowHeadSize ?? paint.strokeWidth * 3;
+  double get _arrowHeadSize => arrowSettings.arrowHeadSize ?? paint.strokeWidth * 3;
 
   /// Getter for padding of drawable.
   ///
   /// Add padding equal to the stroke width of the line and the size of the arrow head.
+  /// Also accounts for outline width if enabled.
   @protected
   @override
-  EdgeInsets get padding => EdgeInsets.symmetric(
-      horizontal: paint.strokeWidth / 2,
-      vertical: paint.strokeWidth / 2 + (_arrowHeadSize / 2));
+  EdgeInsets get padding {
+    final outlinePadding = arrowSettings.outlineEnabled ? arrowSettings.outlineWidth / 2 : 0.0;
+    return EdgeInsets.symmetric(
+        horizontal: paint.strokeWidth / 2 + outlinePadding,
+        vertical: paint.strokeWidth / 2 + (_arrowHeadSize / 2) + outlinePadding);
+  }
 
   /// Draws the arrow on the provided [canvas] of size [size].
   @override
@@ -64,25 +67,54 @@ class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
     final start = position.translate(-length / 2 * scale + arrowHeadSize, 0);
     final end = position.translate(dx, 0);
 
-    if ((end - start).dx > 0) canvas.drawLine(start, end, paint);
-
     final pathDx = dx /*.clamp(-arrowHeadSize/2, double.infinity)*/;
 
+    // Create arrow heads path
     final path = Path();
+    // Right arrow head
     path.moveTo(position.dx + pathDx + arrowHeadSize, position.dy);
     path.lineTo(position.dx + pathDx, position.dy - (arrowHeadSize / 2));
     path.lineTo(position.dx + pathDx, position.dy + (arrowHeadSize / 2));
     path.lineTo(position.dx + pathDx + arrowHeadSize, position.dy);
-
+    // Left arrow head
     path.moveTo(position.dx - pathDx - arrowHeadSize, position.dy);
     path.lineTo(position.dx - pathDx, position.dy - (arrowHeadSize / 2));
     path.lineTo(position.dx - pathDx, position.dy + (arrowHeadSize / 2));
     path.lineTo(position.dx - pathDx - arrowHeadSize, position.dy);
 
+    // Draw outline if enabled
+    if (arrowSettings.outlineEnabled) {
+      final outlinePaint = Paint()
+        ..color = arrowSettings.outlineColor
+        ..strokeWidth = paint.strokeWidth + (arrowSettings.outlineWidth * 2)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = paint.strokeCap;
+
+      final outlineHeadPaint = Paint()
+        ..color = arrowSettings.outlineColor
+        ..strokeWidth = arrowSettings.outlineWidth
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round;
+
+      // Draw outline for line shaft
+      if ((end - start).dx > 0) {
+        canvas.drawLine(start, end, outlinePaint);
+      }
+
+      // Draw outline for arrow heads
+      canvas.drawPath(path, outlineHeadPaint);
+    }
+
+    // Draw the main arrow shaft
+    if ((end - start).dx > 0) {
+      canvas.drawLine(start, end, paint);
+    }
+
     final headPaint = paint.copyWith(
       style: PaintingStyle.fill,
     );
 
+    // Draw arrow heads
     canvas.drawPath(path, headPaint);
   }
 
@@ -97,7 +129,7 @@ class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
     double? length,
     Paint? paint,
     bool? locked,
-    double? arrowHeadSize,
+    ArrowSettings? arrowSettings,
   }) {
     return DoubleArrowDrawable(
       hidden: hidden ?? this.hidden,
@@ -108,7 +140,7 @@ class DoubleArrowDrawable extends Sized1DDrawable implements ShapeDrawable {
       length: length ?? this.length,
       paint: paint ?? this.paint,
       locked: locked ?? this.locked,
-      arrowHeadSize: arrowHeadSize ?? this.arrowHeadSize,
+      arrowSettings: arrowSettings ?? this.arrowSettings,
     );
   }
 

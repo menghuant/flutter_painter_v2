@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../drawables/sized2ddrawable.dart';
 import 'haptic_feedback_settings.dart';
+import 'anchor_point_settings.dart';
 
 typedef ObjectEnlargeControlsResolver = bool Function();
 typedef ObjectShowScaleRotationControlsResolver = bool Function();
@@ -22,6 +23,9 @@ class ObjectSettings {
 
   /// The layout-assist settings of the current object.
   final ObjectLayoutAssistSettings layoutAssist;
+
+  /// The anchor point settings for arrows.
+  final AnchorPointSettings anchorPoint;
 
   /// A function used to decide whether to enlarge the object controls or not.
   /// This is because on touch screens, larger controls are needed to make them easier to tap and drag.
@@ -46,6 +50,7 @@ class ObjectSettings {
   /// Creates a [TextSettings] with the given [layoutAssist].
   const ObjectSettings({
     this.layoutAssist = const ObjectLayoutAssistSettings(),
+    this.anchorPoint = const AnchorPointSettings(),
     this.enlargeControlsResolver = _enlargeControls,
     this.showScaleRotationControlsResolver = _showScaleRotationControls,
   });
@@ -53,11 +58,13 @@ class ObjectSettings {
   /// Creates a copy of this but with the given fields replaced with the new values.
   ObjectSettings copyWith({
     ObjectLayoutAssistSettings? layoutAssist,
+    AnchorPointSettings? anchorPoint,
     ObjectEnlargeControlsResolver? enlargeControlsResolver,
     ObjectShowScaleRotationControlsResolver? showScaleRotationControlsResolver,
   }) {
     return ObjectSettings(
       layoutAssist: layoutAssist ?? this.layoutAssist,
+      anchorPoint: anchorPoint ?? this.anchorPoint,
       enlargeControlsResolver:
           enlargeControlsResolver ?? this.enlargeControlsResolver,
       showScaleRotationControlsResolver: showScaleRotationControlsResolver ??

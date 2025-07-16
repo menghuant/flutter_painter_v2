@@ -86,6 +86,21 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
   /// Subscription to the events coming from the controller.
   StreamSubscription<PainterEvent>? controllerEventSubscription;
 
+  /// Keeps track of anchor dragging state.
+  bool _isDraggingAnchor = false;
+
+  /// Which anchor is being dragged ('start' or 'end').
+  String? _draggingAnchorType;
+
+  /// The arrow being dragged by its anchor.
+  MapEntry<int, ArrowDrawable>? _draggingArrow;
+
+  /// The fixed anchor position during dragging (the one that shouldn't move).
+  Offset? _fixedAnchorPosition;
+  
+  /// The initial anchor position of the dragged anchor when drag started.
+  Offset? _initialDraggedAnchorPosition;
+
   /// Getter for the list of [ObjectDrawable]s in the controller
   /// to make code more readable.
   List<ObjectDrawable> get drawables => PainterController.of(context)
@@ -140,9 +155,11 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
   @override
   Widget build(BuildContext context) {
     final drawables = this.drawables;
-    final drawableAirTransformable =
-        controller?.selectedObjectDrawable != null &&
-            controller?.shapeSettings.factory == null;
+    final selectedDrawable = controller?.selectedObjectDrawable;
+    final drawableAirTransformable = selectedDrawable != null &&
+        controller?.shapeSettings.factory == null &&
+        !(selectedDrawable is ArrowDrawable ||
+            selectedDrawable is DoubleArrowDrawable);
     final selectedDrawableEntry = drawableAirTransformable
         ? MapEntry<int, ObjectDrawable>(
             drawables.indexOf(controller!.selectedObjectDrawable!),
@@ -211,54 +228,60 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                                   ? Stack(
                                       children: [
                                         widget,
-                                        Positioned(
-                                          top: objectPadding -
-                                              (controlsSize / 2),
-                                          bottom: objectPadding -
-                                              (controlsSize / 2),
-                                          left: objectPadding -
-                                              (controlsSize / 2),
-                                          right: objectPadding -
-                                              (controlsSize / 2),
-                                          child: Builder(
-                                            builder: (context) {
-                                              if (usingHtmlRenderer) {
+                                        // Show selection box for non-arrow drawables
+                                        if (!(drawable is ArrowDrawable ||
+                                            drawable is DoubleArrowDrawable))
+                                          Positioned(
+                                            top: objectPadding -
+                                                (controlsSize / 2),
+                                            bottom: objectPadding -
+                                                (controlsSize / 2),
+                                            left: objectPadding -
+                                                (controlsSize / 2),
+                                            right: objectPadding -
+                                                (controlsSize / 2),
+                                            child: Builder(
+                                              builder: (context) {
+                                                if (usingHtmlRenderer) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                          color: Colors.black,
+                                                          width:
+                                                              selectedBorderWidth),
+                                                    ),
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
+                                                            color: Colors.white,
+                                                            width:
+                                                                selectedBorderWidth),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
                                                 return Container(
                                                   decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors.black,
-                                                        width:
-                                                            selectedBorderWidth),
-                                                  ),
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
                                                       border: Border.all(
                                                           color: Colors.white,
                                                           width:
                                                               selectedBorderWidth),
-                                                    ),
-                                                  ),
+                                                      boxShadow: [
+                                                        BorderBoxShadow(
+                                                          color: Colors.black,
+                                                          blurRadius:
+                                                              selectedBlurRadius,
+                                                        )
+                                                      ]),
                                                 );
-                                              }
-                                              return Container(
-                                                decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors.white,
-                                                        width:
-                                                            selectedBorderWidth),
-                                                    boxShadow: [
-                                                      BorderBoxShadow(
-                                                        color: Colors.black,
-                                                        blurRadius:
-                                                            selectedBlurRadius,
-                                                      )
-                                                    ]),
-                                              );
-                                            },
+                                              },
+                                            ),
                                           ),
-                                        ),
                                         if (settings
-                                            .showScaleRotationControlsResolver()) ...[
+                                                .showScaleRotationControlsResolver() &&
+                                            !(drawable is ArrowDrawable ||
+                                                drawable
+                                                    is DoubleArrowDrawable)) ...[
                                           Positioned(
                                             top: objectPadding - (controlsSize),
                                             left:
@@ -382,7 +405,10 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                                             ),
                                           ),
                                         ],
-                                        if (entry.value is Sized2DDrawable) ...[
+                                        if (entry.value is Sized2DDrawable &&
+                                            !(drawable is ArrowDrawable ||
+                                                drawable
+                                                    is DoubleArrowDrawable)) ...[
                                           Positioned(
                                             top: objectPadding - (controlsSize),
                                             left: (size.width / 2) +
@@ -539,28 +565,63 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
               ),
             );
           }),
-          // if(selectedDrawableIndex != null)
-          //   ...[
-          //     Positioned(
-          //
-          //       child: Container(
-          //         decoration: BoxDecoration(
-          //             border:  Border.all(
-          //               color: Colors.white,
-          //               width: 2,
-          //             ),
-          //             boxShadow: [
-          //               BorderBoxShadow(
-          //                 color: Colors.black,
-          //                 blurRadius: 1,
-          //               )
-          //             ]
-          //         ),
-          //         width: size.width,
-          //         height: size.height,
-          //       ),
-          //     )
-          //   ]
+          // Render anchor points for selected arrows on top layer
+          ...drawables.asMap().entries.where((entry) {
+            final drawable = entry.value;
+            final selected = drawable == controller?.selectedObjectDrawable;
+            return selected &&
+                (drawable is ArrowDrawable || drawable is DoubleArrowDrawable);
+          }).map((entry) {
+            final drawable = entry.value as ArrowDrawable;
+            final anchorSettings = settings.anchorPoint;
+
+            // Calculate anchor positions using the helper
+            final anchorPositions =
+                ArrowAnchorDragHelper.calculateAnchorPositions(drawable);
+            final startPosition = anchorPositions['start']!;
+            final endPosition = anchorPositions['end']!;
+
+            return [
+              // Start point anchor with GestureDetector
+              Positioned(
+                left: startPosition.dx - anchorSettings.size,
+                top: startPosition.dy - anchorSettings.size,
+                child: GestureDetector(
+                  onPanStart: (details) => _onAnchorPanStart(
+                      MapEntry(entry.key, drawable), 'start', details),
+                  onPanUpdate: (details) => _onAnchorPanUpdate(
+                      MapEntry(entry.key, drawable), 'start', details),
+                  onPanEnd: (details) => _onAnchorPanEnd(
+                      MapEntry(entry.key, drawable), 'start', details),
+                  child: Container(
+                    width: anchorSettings.size + 16, // Action area
+                    height: anchorSettings.size + 16,
+                    alignment: Alignment.center,
+                    child: _AnchorPoint(settings: anchorSettings),
+                  ),
+                ),
+              ),
+              // End point anchor with GestureDetector
+              Positioned(
+                left: endPosition.dx - anchorSettings.size,
+                top: endPosition.dy - anchorSettings.size,
+                child: GestureDetector(
+                  onPanStart: (details) => _onAnchorPanStart(
+                      MapEntry(entry.key, drawable), 'end', details),
+                  onPanUpdate: (details) => _onAnchorPanUpdate(
+                      MapEntry(entry.key, drawable), 'end', details),
+                  onPanEnd: (details) => _onAnchorPanEnd(
+                      MapEntry(entry.key, drawable), 'end', details),
+                  child: Container(
+                    width: anchorSettings.size + 16, // Action area
+                    height: anchorSettings.size + 16,
+                    alignment: Alignment.center,
+                    child: _AnchorPoint(settings: anchorSettings),
+                  ),
+                ),
+              ),
+            ];
+          }).expand((anchors) => anchors),
         ],
       );
     });
@@ -576,6 +637,10 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
   /// when free-style drawing is enabled.
   FreeStyleSettings get freeStyleSettings =>
       PainterController.of(context).value.settings.freeStyle;
+
+  /// Getter for the [ArrowSettings] from the controller to make code more readable.
+  ArrowSettings get arrowSettings =>
+      PainterController.of(context).value.settings.arrow;
 
   /// Triggers when the user taps an empty space.
   ///
@@ -618,6 +683,34 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
     final drawable = entry.value;
 
     if (index < 0 || drawable.locked) return;
+
+    // For arrows, check if the user is clicking on an anchor point
+    if (drawable is ArrowDrawable) {
+      final anchorPositions =
+          ArrowAnchorDragHelper.calculateAnchorPositions(drawable);
+      final localPosition = details.localFocalPoint;
+      final anchorSize = settings.anchorPoint.size;
+
+      // Check if clicking on start anchor
+      if (ArrowAnchorDragHelper.isPointInAnchorArea(
+        point: localPosition,
+        anchorCenter: anchorPositions['start']!,
+        anchorSize: anchorSize,
+      )) {
+        // Don't start body dragging, anchor drag will handle it
+        return;
+      }
+
+      // Check if clicking on end anchor
+      if (ArrowAnchorDragHelper.isPointInAnchorArea(
+        point: localPosition,
+        anchorCenter: anchorPositions['end']!,
+        anchorSize: anchorSize,
+      )) {
+        // Don't start body dragging, anchor drag will handle it
+        return;
+      }
+    }
 
     setState(() {
       // selectedDrawableIndex = index;
@@ -1039,6 +1132,101 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
     onDrawableScaleEnd(entry);
   }
 
+  /// Handles the start of anchor point dragging.
+  void _onAnchorPanStart(MapEntry<int, ArrowDrawable> entry, String anchorType,
+      DragStartDetails details) {
+    if (!widget.interactionEnabled) return;
+
+    // Calculate the current anchor positions and remember both fixed and initial dragged positions
+    final arrow = entry.value;
+    final anchorPositions = ArrowAnchorDragHelper.calculateAnchorPositions(arrow);
+    
+    // The fixed anchor is the opposite of the one being dragged
+    final fixedAnchorType = anchorType == 'start' ? 'end' : 'start';
+    _fixedAnchorPosition = anchorPositions[fixedAnchorType]!;
+    _initialDraggedAnchorPosition = anchorPositions[anchorType]!;
+
+    setState(() {
+      _isDraggingAnchor = true;
+      _draggingAnchorType = anchorType;
+      _draggingArrow = entry;
+    });
+  }
+
+  /// Handles anchor point dragging updates.
+  void _onAnchorPanUpdate(MapEntry<int, ArrowDrawable> entry, String anchorType,
+      DragUpdateDetails details) {
+    if (!widget.interactionEnabled || !_isDraggingAnchor) return;
+
+    final index = entry.key;
+    final currentArrow = drawables[index] as ArrowDrawable;
+
+    try {
+      // Convert local gesture position to canvas coordinates
+      final canvasPosition = _convertLocalToCanvasPosition(details.localPosition);
+      
+      // Calculate new arrow properties from anchor positions
+      final arrowUpdate = _calculateArrowFromAnchorDrag(
+        anchorType: anchorType,
+        draggedPosition: canvasPosition,
+      );
+
+      // Apply the update to the arrow
+      final updatedArrow = currentArrow.copyWith(
+        position: arrowUpdate.position,
+        length: arrowUpdate.length,
+        rotation: arrowUpdate.rotation,
+      );
+
+      updateDrawable(currentArrow, updatedArrow, newAction: false);
+    } catch (e) {
+      debugPrint('Error updating arrow anchor: $e');
+    }
+  }
+
+  /// Handles the end of anchor point dragging.
+  void _onAnchorPanEnd(MapEntry<int, ArrowDrawable> entry, String anchorType,
+      DragEndDetails details) {
+    if (!widget.interactionEnabled || !_isDraggingAnchor) return;
+
+    // Create a final action for undo/redo support
+    final index = entry.key;
+    final currentArrow = drawables[index] as ArrowDrawable;
+    updateDrawable(currentArrow, currentArrow, newAction: true);
+
+    setState(() {
+      _isDraggingAnchor = false;
+      _draggingAnchorType = null;
+      _draggingArrow = null;
+      _fixedAnchorPosition = null;
+      _initialDraggedAnchorPosition = null;
+    });
+  }
+
+  /// Converts local gesture position to canvas coordinates using the initial anchor position.
+  Offset _convertLocalToCanvasPosition(Offset localPosition) {
+    final initialAnchorPosition = _initialDraggedAnchorPosition!;
+    final anchorSettings = settings.anchorPoint;
+    
+    return Offset(
+      initialAnchorPosition.dx - anchorSettings.size + localPosition.dx,
+      initialAnchorPosition.dy - anchorSettings.size + localPosition.dy,
+    );
+  }
+
+  /// Calculates new arrow properties from anchor drag positions.
+  ({Offset position, double length, double rotation}) _calculateArrowFromAnchorDrag({
+    required String anchorType,
+    required Offset draggedPosition,
+  }) {
+    return ArrowAnchorDragHelper.enforceMinimumLength(
+      anchorType: anchorType,
+      draggedPosition: draggedPosition,
+      fixedAnchorPosition: _fixedAnchorPosition!,
+      minimumLength: arrowSettings.minimumLength,
+    );
+  }
+
   /// A callback that is called when a transformation occurs in the [InteractiveViewer] in the widget tree.
   void onTransformUpdated() {
     setState(() {
@@ -1099,6 +1287,41 @@ class _ObjectControlBox extends StatelessWidget {
             color: shadowColor,
             blurRadius: 2,
           )
+        ],
+      ),
+    );
+  }
+}
+
+/// A circular anchor point widget for arrows.
+class _AnchorPoint extends StatelessWidget {
+  /// The anchor point settings that control appearance.
+  final AnchorPointSettings settings;
+
+  /// Creates an [_AnchorPoint] with the given [settings].
+  const _AnchorPoint({
+    Key? key,
+    required this.settings,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: settings.size,
+      height: settings.size,
+      decoration: BoxDecoration(
+        color: settings.color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: settings.borderColor,
+          width: settings.borderWidth,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
         ],
       ),
     );

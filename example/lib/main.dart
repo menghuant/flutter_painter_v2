@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_painter_v2/flutter_painter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,119 +9,522 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter Painter Arrow Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const ArrowPainterDemo(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class ArrowPainterDemo extends StatefulWidget {
+  const ArrowPainterDemo({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<ArrowPainterDemo> createState() => _ArrowPainterDemoState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
+  late PainterController _controller;
+  bool _isDoubleArrow = false;
+  Color _arrowColor = Colors.black;
+  double _strokeWidth = 5.0;
+  double _arrowHeadSize = 15.0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  // Anchor point settings
+  double _anchorPointSize = 16.0;
+  Color _anchorPointColor = Colors.white;
+  Color _anchorPointBorderColor = Colors.grey;
+  double _anchorPointBorderWidth = 2.0;
+
+  // Arrow outline settings
+  bool _outlineEnabled = true;
+  Color _outlineColor = Colors.white;
+  double _outlineWidth = 2.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PainterController(
+      settings: PainterSettings(
+        object: ObjectSettings(
+          layoutAssist: ObjectLayoutAssistSettings(
+            enabled: false,
+          ),
+          anchorPoint: AnchorPointSettings(
+            size: _anchorPointSize,
+            color: _anchorPointColor,
+            borderColor: _anchorPointBorderColor,
+            borderWidth: _anchorPointBorderWidth,
+          ),
+        ),
+        shape: ShapeSettings(
+          factory: ArrowFactory(),
+          drawOnce: false,
+          paint: Paint()
+            ..color = _arrowColor
+            ..strokeWidth = _strokeWidth
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round,
+        ),
+        arrow: ArrowSettings(
+          minimumLength: 32.0,
+          outlineEnabled: _outlineEnabled,
+          outlineColor: _outlineColor,
+          outlineWidth: _outlineWidth,
+          arrowHeadSize: _arrowHeadSize,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _updateArrowSettings() {
+    _controller.settings = _controller.settings.copyWith(
+      shape: ShapeSettings(
+        factory: _isDoubleArrow 
+          ? DoubleArrowFactory() 
+          : ArrowFactory(),
+        drawOnce: false,
+        paint: Paint()
+          ..color = _arrowColor
+          ..strokeWidth = _strokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round,
+      ),
+      arrow: ArrowSettings(
+        minimumLength: 32.0,
+        outlineEnabled: _outlineEnabled,
+        outlineColor: _outlineColor,
+        outlineWidth: _outlineWidth,
+        arrowHeadSize: _arrowHeadSize,
+      ),
+    );
+  }
+
+  void _updateAnchorPointSettings() {
+    _controller.settings = _controller.settings.copyWith(
+      object: _controller.settings.object.copyWith(
+        anchorPoint: AnchorPointSettings(
+          size: _anchorPointSize,
+          color: _anchorPointColor,
+          borderColor: _anchorPointBorderColor,
+          borderWidth: _anchorPointBorderWidth,
+        ),
+      ),
+    );
+  }
+
+  void _clearCanvas() {
+    _controller.clearDrawables();
+  }
+
+  void _undo() {
+    _controller.undo();
+  }
+
+  void _redo() {
+    _controller.redo();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
+        title: const Text('Flutter Painter Arrow Demo'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            onPressed: _undo,
+            tooltip: 'Undo',
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            onPressed: _redo,
+            tooltip: 'Redo',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _clearCanvas,
+            tooltip: 'Clear Canvas',
+          ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Column(
+        children: [
+          // Drawing Canvas
+          Expanded(
+            child: Container(
+              color: Colors.grey[100],
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    color: Colors.black,
+                    child: Stack(
+                      children: [
+                        Image.asset(
+                          'assets/5.jpg',
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
+                        FlutterPainter(
+                          controller: _controller,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          // Controls
+          Container(
+            height: 450, // Fixed height for the controls panel
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
-          ],
-        ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+              children: [
+                // Arrow Type Selection
+                Row(
+                  children: [
+                    const Text('Arrow Type: '),
+                    const SizedBox(width: 16),
+                    ChoiceChip(
+                      label: const Text('Single Arrow'),
+                      selected: !_isDoubleArrow,
+                      onSelected: (selected) {
+                        setState(() {
+                          _isDoubleArrow = false;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Double Arrow'),
+                      selected: _isDoubleArrow,
+                      onSelected: (selected) {
+                        setState(() {
+                          _isDoubleArrow = true;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Color Selection
+                Row(
+                  children: [
+                    const Text('Color: '),
+                    const SizedBox(width: 16),
+                    ...[
+                      Colors.black,
+                      Colors.red,
+                      Colors.blue,
+                      Colors.green,
+                      Colors.orange,
+                      Colors.purple,
+                    ].map((color) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _arrowColor = color;
+                                _updateArrowSettings();
+                              });
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: color,
+                                border: Border.all(
+                                  color: _arrowColor == color
+                                      ? Colors.black
+                                      : Colors.grey,
+                                  width: _arrowColor == color ? 3 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Stroke Width
+                Row(
+                  children: [
+                    const Text('Stroke Width: '),
+                    Expanded(
+                      child: Slider(
+                        value: _strokeWidth,
+                        min: 5.0,
+                        max: 20.0,
+                        divisions: 15,
+                        label: _strokeWidth.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() {
+                            _strokeWidth = value;
+                            _updateArrowSettings();
+                          });
+                        },
+                      ),
+                    ),
+                    Text(_strokeWidth.toStringAsFixed(1)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Arrow Head Size
+                Row(
+                  children: [
+                    const Text('Arrow Head Size: '),
+                    Expanded(
+                      child: Slider(
+                        value: _arrowHeadSize,
+                        min: 15.0,
+                        max: 40.0,
+                        divisions: 25,
+                        label: _arrowHeadSize.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() {
+                            _arrowHeadSize = value;
+                            _updateArrowSettings();
+                          });
+                        },
+                      ),
+                    ),
+                    Text(_arrowHeadSize.toStringAsFixed(1)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Arrow Outline Settings
+                Row(
+                  children: [
+                    const Text('Outline Enabled: '),
+                    Switch(
+                      value: _outlineEnabled,
+                      onChanged: (value) {
+                        setState(() {
+                          _outlineEnabled = value;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                if (_outlineEnabled) ...[
+                  const SizedBox(height: 8),
+                  // Outline Color
+                  Row(
+                    children: [
+                      const Text('Outline Color: '),
+                      const SizedBox(width: 16),
+                      ...[ Colors.white, Colors.black, Colors.red, Colors.blue, Colors.green, Colors.orange, Colors.purple, ].map((color) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _outlineColor = color;
+                                  _updateArrowSettings();
+                                });
+                              },
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  border: Border.all(
+                                    color: _outlineColor == color
+                                        ? Colors.red
+                                        : Colors.grey,
+                                    width: _outlineColor == color ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Outline Width
+                  Row(
+                    children: [
+                      const Text('Outline Width: '),
+                      Expanded(
+                        child: Slider(
+                          value: _outlineWidth,
+                          min: 1.0,
+                          max: 5.0,
+                          divisions: 4,
+                          label: _outlineWidth.toStringAsFixed(1),
+                          onChanged: (value) {
+                            setState(() {
+                              _outlineWidth = value;
+                              _updateArrowSettings();
+                            });
+                          },
+                        ),
+                      ),
+                      Text(_outlineWidth.toStringAsFixed(1)),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                // Debug Information
+                ValueListenableBuilder<PainterControllerValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, child) {
+                    // Get image dimensions - you need to replace these with actual image dimensions
+                    // You can get these by loading the image asset or hardcoding if you know them
+                    const imageWidth = 1024.0;  // Replace with actual 5.jpg width
+                    const imageHeight = 768.0;  // Replace with actual 5.jpg height
+                    
+                    // Calculate the display size and offset due to AspectRatio(1.0) and BoxFit.contain
+                    const containerSize = 400.0; // Approximate container size (1:1 aspect ratio)
+                    final imageAspectRatio = imageWidth / imageHeight;
+                    final containerAspectRatio = 1.0;
+                    
+                    late double displayWidth, displayHeight, offsetX, offsetY;
+                    
+                    if (imageAspectRatio > containerAspectRatio) {
+                      // Image is wider, fit by width
+                      displayWidth = containerSize;
+                      displayHeight = containerSize / imageAspectRatio;
+                      offsetX = 0;
+                      offsetY = (containerSize - displayHeight) / 2;
+                    } else {
+                      // Image is taller, fit by height
+                      displayWidth = containerSize * imageAspectRatio;
+                      displayHeight = containerSize;
+                      offsetX = (containerSize - displayWidth) / 2;
+                      offsetY = 0;
+                    }
+                    
+                    // Function to convert canvas coordinates to image coordinates
+                    Offset canvasToImageCoords(Offset canvasPoint) {
+                      final imageX = ((canvasPoint.dx - offsetX) / displayWidth) * imageWidth;
+                      final imageY = ((canvasPoint.dy - offsetY) / displayHeight) * imageHeight;
+                      return Offset(imageX, imageY);
+                    }
+                    
+                    final arrowsInfo = value.drawables
+                        .where((d) => d is ArrowDrawable || d is DoubleArrowDrawable)
+                        .map((d) {
+                      final isSelected = d == value.selectedObjectDrawable;
+                      String anchorInfo = '';
+                      
+                      if (d is ArrowDrawable) {
+                        // Calculate arrow start and end points
+                        final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
+                        final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
+                        
+                        // Apply rotation for anchor positions
+                        final cos = math.cos(d.rotationAngle);
+                        final sin = math.sin(d.rotationAngle);
+                        
+                        final rotatedStart = Offset(
+                          d.position.dx + (startPoint.dx - d.position.dx) * cos - (startPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (startPoint.dx - d.position.dx) * sin + (startPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        final rotatedEnd = Offset(
+                          d.position.dx + (endPoint.dx - d.position.dx) * cos - (endPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (endPoint.dx - d.position.dx) * sin + (endPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        // Convert coordinates to image coordinate system
+                        final imageRotatedStart = canvasToImageCoords(rotatedStart);
+                        final imageRotatedEnd = canvasToImageCoords(rotatedEnd);
+                        
+                        if (isSelected) {
+                          anchorInfo = ' | rotation: ${(d.rotationAngle * 180 / math.pi).toStringAsFixed(1)}° | anchors: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})';
+                        }
+                        
+                        return 'Arrow: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})$anchorInfo';
+                      } else if (d is DoubleArrowDrawable) {
+                        final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
+                        final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
+                        
+                        // Apply rotation for anchor positions
+                        final cos = math.cos(d.rotationAngle);
+                        final sin = math.sin(d.rotationAngle);
+                        
+                        final rotatedStart = Offset(
+                          d.position.dx + (startPoint.dx - d.position.dx) * cos - (startPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (startPoint.dx - d.position.dx) * sin + (startPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        final rotatedEnd = Offset(
+                          d.position.dx + (endPoint.dx - d.position.dx) * cos - (endPoint.dy - d.position.dy) * sin,
+                          d.position.dy + (endPoint.dx - d.position.dx) * sin + (endPoint.dy - d.position.dy) * cos,
+                        );
+                        
+                        // Convert coordinates to image coordinate system
+                        final imageRotatedStart = canvasToImageCoords(rotatedStart);
+                        final imageRotatedEnd = canvasToImageCoords(rotatedEnd);
+                        
+                        if (isSelected) {
+                          anchorInfo = ' | rotation: ${(d.rotationAngle * 180 / math.pi).toStringAsFixed(1)}° | anchors: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})';
+                        }
+                        
+                        return 'DoubleArrow: start(${imageRotatedStart.dx.toStringAsFixed(1)}, ${imageRotatedStart.dy.toStringAsFixed(1)}) end(${imageRotatedEnd.dx.toStringAsFixed(1)}, ${imageRotatedEnd.dy.toStringAsFixed(1)})$anchorInfo';
+                      }
+                      return '';
+                    }).toList();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Debug Info:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        if (arrowsInfo.isNotEmpty)
+                          ...arrowsInfo.map((info) => Text(
+                                info,
+                                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                              ))
+                        else
+                          const Text('No arrows drawn', style: TextStyle(fontSize: 12)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          '// Selected arrows show anchor point positions',
+                          style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
