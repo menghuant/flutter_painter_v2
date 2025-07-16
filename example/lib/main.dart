@@ -32,7 +32,8 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
   late PainterController _controller;
   bool _isDoubleArrow = false;
   Color _arrowColor = Colors.black;
-  double _strokeWidth = 2.0;
+  double _strokeWidth = 5.0;
+  double _arrowHeadSize = 15.0;
 
   @override
   void initState() {
@@ -45,7 +46,8 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
           ),
         ),
         shape: ShapeSettings(
-          factory: ArrowFactory(),
+          factory: ArrowFactory(arrowHeadSize: _arrowHeadSize),
+          drawOnce: false,
           paint: Paint()
             ..color = _arrowColor
             ..strokeWidth = _strokeWidth
@@ -65,7 +67,10 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
   void _updateArrowSettings() {
     _controller.settings = _controller.settings.copyWith(
       shape: ShapeSettings(
-        factory: _isDoubleArrow ? DoubleArrowFactory() : ArrowFactory(),
+        factory: _isDoubleArrow 
+          ? DoubleArrowFactory(arrowHeadSize: _arrowHeadSize) 
+          : ArrowFactory(arrowHeadSize: _arrowHeadSize),
+        drawOnce: false,
         paint: Paint()
           ..color = _arrowColor
           ..strokeWidth = _strokeWidth
@@ -105,7 +110,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
             tooltip: 'Redo',
           ),
           IconButton(
-            icon: const Icon(Icons.clear),
+            icon: const Icon(Icons.delete),
             onPressed: _clearCanvas,
             tooltip: 'Clear Canvas',
           ),
@@ -121,9 +126,19 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                 child: AspectRatio(
                   aspectRatio: 1.0,
                   child: Container(
-                    color: Colors.white,
-                    child: FlutterPainter(
-                      controller: _controller,
+                    color: Colors.black,
+                    child: Stack(
+                      children: [
+                        Image.asset(
+                          'assets/5.jpg',
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
+                        FlutterPainter(
+                          controller: _controller,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -221,9 +236,9 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                     Expanded(
                       child: Slider(
                         value: _strokeWidth,
-                        min: 1.0,
-                        max: 10.0,
-                        divisions: 9,
+                        min: 5.0,
+                        max: 20.0,
+                        divisions: 15,
                         label: _strokeWidth.toStringAsFixed(1),
                         onChanged: (value) {
                           setState(() {
@@ -235,6 +250,71 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                     ),
                     Text(_strokeWidth.toStringAsFixed(1)),
                   ],
+                ),
+                const SizedBox(height: 16),
+                // Arrow Head Size
+                Row(
+                  children: [
+                    const Text('Arrow Head Size: '),
+                    Expanded(
+                      child: Slider(
+                        value: _arrowHeadSize,
+                        min: 15.0,
+                        max: 40.0,
+                        divisions: 25,
+                        label: _arrowHeadSize.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() {
+                            _arrowHeadSize = value;
+                            _updateArrowSettings();
+                          });
+                        },
+                      ),
+                    ),
+                    Text(_arrowHeadSize.toStringAsFixed(1)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Debug Information
+                ValueListenableBuilder<PainterControllerValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, child) {
+                    final arrowsInfo = value.drawables
+                        .where((d) => d is ArrowDrawable || d is DoubleArrowDrawable)
+                        .map((d) {
+                      if (d is ArrowDrawable) {
+                        // Calculate arrow start and end points
+                        final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
+                        final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
+                        return 'Arrow: start(${startPoint.dx.toStringAsFixed(1)}, ${startPoint.dy.toStringAsFixed(1)}) end(${endPoint.dx.toStringAsFixed(1)}, ${endPoint.dy.toStringAsFixed(1)})';
+                      } else if (d is DoubleArrowDrawable) {
+                        final startPoint = d.position.translate(-d.length / 2 * d.scale, 0);
+                        final endPoint = d.position.translate(d.length / 2 * d.scale, 0);
+                        return 'DoubleArrow: start(${startPoint.dx.toStringAsFixed(1)}, ${startPoint.dy.toStringAsFixed(1)}) end(${endPoint.dx.toStringAsFixed(1)}, ${endPoint.dy.toStringAsFixed(1)})';
+                      }
+                      return '';
+                    }).toList();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Debug Info:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        if (arrowsInfo.isNotEmpty)
+                          ...arrowsInfo.map((info) => Text(
+                                info,
+                                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                              ))
+                        else
+                          const Text('No arrows drawn', style: TextStyle(fontSize: 12)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          '// TODO: After implementing anchor points, this will also display anchor point positions',
+                          style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
