@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// allowing users to directly manipulate arrow endpoints.
 @immutable
 class AnchorPointSettings {
-  /// The size (diameter) of the anchor point in pixels.
+  /// The size (diameter) of the anchor point in logical pixels.
   ///
   /// Defaults to 16.0.
   final double size;
@@ -21,7 +21,7 @@ class AnchorPointSettings {
   /// Defaults to [Colors.grey].
   final Color borderColor;
 
-  /// The width of the anchor point border in pixels.
+  /// The width of the anchor point border in logical pixels.
   ///
   /// Defaults to 2.0.
   final double borderWidth;

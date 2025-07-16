@@ -7,7 +7,7 @@ import '../controllers/drawables/shape/arrow_drawable.dart';
 class ArrowAnchorDragHelper {
   /// Checks if a point is within the anchor action area.
   ///
-  /// The action area is defined as anchorSize + 16 pixels.
+  /// The action area is defined as anchorSize + 16 logical pixels.
   static bool isPointInAnchorArea({
     required Offset point,
     required Offset anchorCenter,

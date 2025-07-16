@@ -51,8 +51,15 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
     final factory = settings.factory;
     if (factory == null || details.pointerCount > 1) return;
 
-    final shapeDrawable =
+    var shapeDrawable =
         factory.create(details.localFocalPoint, settings.paint);
+
+    // Apply arrow settings if this is an arrow drawable
+    if (shapeDrawable is ArrowDrawable) {
+      shapeDrawable = shapeDrawable.copyWith(arrowSettings: arrowSettings);
+    } else if (shapeDrawable is DoubleArrowDrawable) {
+      shapeDrawable = shapeDrawable.copyWith(arrowSettings: arrowSettings);
+    }
 
     setState(() {
       PainterController.of(context).addDrawables([shapeDrawable]);
@@ -81,11 +88,28 @@ class _ShapeWidgetState extends State<_ShapeWidget> {
             : finalLength;
       }
       
-      final newDrawable = sized1DDrawable.copyWith(
-        position: newPosition,
-        length: finalLength,
-        rotation: newLine.direction,
-      );
+      ObjectDrawable newDrawable;
+      if (sized1DDrawable is ArrowDrawable) {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+          arrowSettings: arrowSettings,
+        );
+      } else if (sized1DDrawable is DoubleArrowDrawable) {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+          arrowSettings: arrowSettings,
+        );
+      } else {
+        newDrawable = sized1DDrawable.copyWith(
+          position: newPosition,
+          length: finalLength,
+          rotation: newLine.direction,
+        );
+      }
       currentShapeDrawable = (newDrawable as ShapeDrawable);
       updateDrawable(sized1DDrawable, newDrawable);
     } else if (shapeDrawable is Sized2DDrawable) {

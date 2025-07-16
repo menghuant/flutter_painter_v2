@@ -16,6 +16,7 @@ Flutter Painter provides you with a widget that can be used to draw on it. Right
   - **Anchor Point Editing**: Drag arrow endpoints directly for precise positioning
   - **Minimum Length Constraints**: Configurable minimum arrow length (32px default)
   - **Dual Arrow Support**: Both single and double-headed arrows
+  - **Outline Support**: Configurable outline color and width for better visibility
   - **Customizable Appearance**: Configurable anchor point size, colors, and borders
 - **Free-style eraser** to erase any part of a drawing or object you don't want on the painter.[*](#erasing)
 
@@ -121,7 +122,7 @@ There are currently six types of settings:
 - `textSettings`: They mainly control the `TextStyle` of the text being drawn. It also has a focus node field ([more on focus nodes here](https://flutter.dev/docs/cookbook/forms/focus)) to allow you to detect when the user starts and stops editing text.
 - `objectSettings`: These settings control objects that can be moved, scaled and rotated. Texts, shapes and images are all considered objects. It controls layout assist, which allows to center objects and rotate them at a right angle, and settings regarding the object controls for scaling, rotating and resizing. Also includes anchor point appearance settings for arrows.
 - `shapeSettings`: These control the paint and shape factory used (Shape Factory is used to create shapes), and whether the shape is drawn once or continiously.
-- `arrowSettings`: These control arrow-specific behavior, including minimum length constraints (32px default) to ensure arrows maintain usability.
+- `arrowSettings`: These control arrow-specific behavior, including minimum length constraints (32px default) and outline appearance (enabled by default with white 2px outline) to ensure arrows maintain usability and visibility.
 - `scaleSettings`: These settings control the scaling on the painter (zooming in/out). By default, scaling is disabled.
 
 You can provide initial settings for the things you want to draw through the settings parameter in the constructor of the `PainterController`.
@@ -209,29 +210,152 @@ The selected object drawable will also be automatically update if it is replaced
 
 ### Arrow System & Coordinates
 
-Flutter Painter V2 features an advanced arrow system with direct anchor point editing. Arrows can be created using `ArrowFactory` or `DoubleArrowFactory` and edited by dragging their endpoints.
+Flutter Painter V2 features an advanced arrow system with direct anchor point editing, outline support, and comprehensive configuration options. Arrows can be created using `ArrowFactory` or `DoubleArrowFactory` and edited by dragging their endpoints.
 
-#### Drawing Arrows
+#### Arrow Configuration Parameters
+
+**ArrowSettings** (controls arrow behavior and appearance):
+- `minimumLength` (double): Minimum arrow length in logical pixels (default: 32.0)
+- `outlineEnabled` (bool): Whether to draw outline around arrows (default: true)
+- `outlineColor` (Color): Color of the outline (default: Colors.white)
+- `outlineWidth` (double): Width of the outline in logical pixels (default: 2.0)
+- `arrowHeadSize` (double?): Size of arrow heads in logical pixels. If null, defaults to 3x stroke width (default: null)
+
+**AnchorPointSettings** (controls anchor point appearance when arrows are selected):
+- `size` (double): Diameter of anchor points in logical pixels (default: 16.0)
+- `color` (Color): Fill color of anchor points (default: Colors.white)
+- `borderColor` (Color): Border color of anchor points (default: Colors.grey)
+- `borderWidth` (double): Border width of anchor points (default: 2.0)
+
+**ArrowFactory/DoubleArrowFactory** (controls arrow creation):
+- No parameters required. Arrow head size is now controlled through `ArrowSettings.arrowHeadSize`
+
+#### Basic Arrow Setup
 
 ```dart
-// Setup arrow drawing
+// Setup single arrow drawing
 final controller = PainterController(
   settings: PainterSettings(
     shape: ShapeSettings(
-      factory: ArrowFactory(arrowHeadSize: 20), // or DoubleArrowFactory
+      factory: ArrowFactory(),
       paint: Paint()
         ..color = Colors.black
         ..strokeWidth = 5.0
-        ..style = PaintingStyle.stroke,
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
     ),
     arrow: ArrowSettings(
-      minimumLength: 32.0, // Configurable minimum length
+      minimumLength: 32.0,
+      outlineEnabled: true,
+      outlineColor: Colors.white,
+      outlineWidth: 2.0,
+      arrowHeadSize: 20.0,        // Arrow head size now in ArrowSettings
     ),
+    object: ObjectSettings(
+      anchorPoint: AnchorPointSettings(
+        size: 16.0,
+        color: Colors.white,
+        borderColor: Colors.grey,
+        borderWidth: 2.0,
+      ),
+    ),
+  ),
+);
+
+// Switch to double arrow
+controller.settings = controller.settings.copyWith(
+  shape: controller.settings.shape.copyWith(
+    factory: DoubleArrowFactory(),
   ),
 );
 ```
 
-#### Accessing Arrow Coordinates
+#### Advanced Arrow Configuration
+
+```dart
+// Custom arrow with specific styling
+final customArrowController = PainterController(
+  settings: PainterSettings(
+    shape: ShapeSettings(
+      factory: ArrowFactory(),
+      paint: Paint()
+        ..color = Colors.blue
+        ..strokeWidth = 8.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    ),
+    arrow: ArrowSettings(
+      minimumLength: 50.0,        // Larger minimum length
+      outlineEnabled: true,
+      outlineColor: Colors.yellow, // Custom outline color
+      outlineWidth: 3.0,          // Thicker outline
+      arrowHeadSize: 25.0,        // Custom arrow head size
+    ),
+    object: ObjectSettings(
+      anchorPoint: AnchorPointSettings(
+        size: 20.0,               // Larger anchor points
+        color: Colors.red,        // Custom anchor color
+        borderColor: Colors.black,
+        borderWidth: 3.0,
+      ),
+    ),
+  ),
+);
+
+// Disable outline for minimal appearance
+controller.settings = controller.settings.copyWith(
+  arrow: controller.settings.arrow.copyWith(
+    outlineEnabled: false,
+  ),
+);
+```
+
+#### Programmatically Creating Arrows
+
+```dart
+// Create arrow directly in code
+final arrow = ArrowDrawable(
+  position: Offset(100, 100),     // Center position
+  length: 80.0,                   // Arrow length
+  rotationAngle: 0.0,             // Rotation in radians
+  paint: Paint()
+    ..color = Colors.red
+    ..strokeWidth = 4.0
+    ..style = PaintingStyle.stroke,
+  arrowSettings: ArrowSettings(
+    minimumLength: 32.0,
+    outlineEnabled: true,
+    outlineColor: Colors.white,
+    outlineWidth: 2.0,
+    arrowHeadSize: 15.0,          // Arrow head size in settings
+  ),
+);
+
+// Add to controller
+controller.addDrawables([arrow]);
+
+// Create double arrow
+final doubleArrow = DoubleArrowDrawable(
+  position: Offset(200, 200),
+  length: 120.0,
+  rotationAngle: math.pi / 4,     // 45 degrees
+  paint: Paint()
+    ..color = Colors.green
+    ..strokeWidth = 6.0
+    ..style = PaintingStyle.stroke,
+  arrowSettings: ArrowSettings(
+    minimumLength: 40.0,
+    outlineEnabled: true,
+    outlineColor: Colors.black,
+    outlineWidth: 1.5,
+    arrowHeadSize: 18.0,          // Arrow head size in settings
+  ),
+);
+
+controller.addDrawables([doubleArrow]);
+```
+
+#### Accessing Arrow Properties and Coordinates
 
 All arrow coordinates are stored in **canvas coordinate system** (relative to FlutterPainter widget):
 
@@ -242,18 +366,81 @@ final arrows = controller.value.drawables
     .cast<ArrowDrawable>();
 
 for (final arrow in arrows) {
-  // Center position in canvas coordinates
-  Offset centerPosition = arrow.position;
+  // Basic arrow properties
+  Offset centerPosition = arrow.position;       // Center position in canvas coordinates
+  double length = arrow.length;               // Arrow length in logical pixels
+  double rotation = arrow.rotationAngle;      // Rotation in radians
+  double scale = arrow.scale;                 // Scale factor
+  
+  // Arrow styling
+  Paint arrowPaint = arrow.paint;             // Main arrow color and stroke
+  
+  // Arrow settings (outline, minimum length, head size)
+  ArrowSettings settings = arrow.arrowSettings;
+  double minLength = settings.minimumLength;
+  bool hasOutline = settings.outlineEnabled;
+  Color outlineColor = settings.outlineColor;
+  double outlineWidth = settings.outlineWidth;
+  double? arrowHeadSize = settings.arrowHeadSize; // Arrow head size (null = auto)
   
   // Get start/end anchor positions in canvas coordinates
   final anchors = ArrowAnchorDragHelper.calculateAnchorPositions(arrow);
   Offset startPoint = anchors['start']!;
   Offset endPoint = anchors['end']!;
   
-  // Other properties
-  double length = arrow.length;           // Canvas units (logical pixels)
-  double rotation = arrow.rotationAngle;  // Radians
-  double scale = arrow.scale;
+  print('Arrow: center=$centerPosition, length=$length');
+  print('  Start: $startPoint, End: $endPoint');
+  print('  Outline: ${hasOutline ? '$outlineColor ${outlineWidth}px' : 'disabled'}');
+}
+
+// Get double arrows specifically
+final doubleArrows = controller.value.drawables
+    .where((d) => d is DoubleArrowDrawable)
+    .cast<DoubleArrowDrawable>();
+
+for (final doubleArrow in doubleArrows) {
+  // Same properties as ArrowDrawable
+  print('Double Arrow: ${doubleArrow.position}, length=${doubleArrow.length}');
+}
+```
+
+#### Modifying Existing Arrows
+
+```dart
+// Update arrow settings for all existing arrows
+void updateArrowOutlines(Color newOutlineColor, double newWidth) {
+  final existingArrows = controller.value.drawables
+      .where((d) => d is ArrowDrawable || d is DoubleArrowDrawable)
+      .toList();
+      
+  for (final arrow in existingArrows) {
+    ObjectDrawable updatedArrow;
+    
+    if (arrow is ArrowDrawable) {
+      updatedArrow = arrow.copyWith(
+        arrowSettings: arrow.arrowSettings.copyWith(
+          outlineColor: newOutlineColor,
+          outlineWidth: newWidth,
+        ),
+      );
+    } else if (arrow is DoubleArrowDrawable) {
+      updatedArrow = (arrow as DoubleArrowDrawable).copyWith(
+        arrowSettings: arrow.arrowSettings.copyWith(
+          outlineColor: newOutlineColor,
+          outlineWidth: newWidth,
+        ),
+      );
+    } else {
+      continue;
+    }
+    
+    controller.replaceDrawable(arrow, updatedArrow);
+  }
+}
+
+// Disable outlines for all arrows
+void disableAllArrowOutlines() {
+  // Similar pattern but set outlineEnabled: false
 }
 ```
 

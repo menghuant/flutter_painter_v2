@@ -36,6 +36,17 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
   double _strokeWidth = 5.0;
   double _arrowHeadSize = 15.0;
 
+  // Anchor point settings
+  double _anchorPointSize = 16.0;
+  Color _anchorPointColor = Colors.white;
+  Color _anchorPointBorderColor = Colors.grey;
+  double _anchorPointBorderWidth = 2.0;
+
+  // Arrow outline settings
+  bool _outlineEnabled = true;
+  Color _outlineColor = Colors.white;
+  double _outlineWidth = 2.0;
+
   @override
   void initState() {
     super.initState();
@@ -45,15 +56,28 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
           layoutAssist: ObjectLayoutAssistSettings(
             enabled: false,
           ),
+          anchorPoint: AnchorPointSettings(
+            size: _anchorPointSize,
+            color: _anchorPointColor,
+            borderColor: _anchorPointBorderColor,
+            borderWidth: _anchorPointBorderWidth,
+          ),
         ),
         shape: ShapeSettings(
-          factory: ArrowFactory(arrowHeadSize: _arrowHeadSize),
+          factory: ArrowFactory(),
           drawOnce: false,
           paint: Paint()
             ..color = _arrowColor
             ..strokeWidth = _strokeWidth
             ..style = PaintingStyle.stroke
             ..strokeCap = StrokeCap.round,
+        ),
+        arrow: ArrowSettings(
+          minimumLength: 32.0,
+          outlineEnabled: _outlineEnabled,
+          outlineColor: _outlineColor,
+          outlineWidth: _outlineWidth,
+          arrowHeadSize: _arrowHeadSize,
         ),
       ),
     );
@@ -69,14 +93,34 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
     _controller.settings = _controller.settings.copyWith(
       shape: ShapeSettings(
         factory: _isDoubleArrow 
-          ? DoubleArrowFactory(arrowHeadSize: _arrowHeadSize) 
-          : ArrowFactory(arrowHeadSize: _arrowHeadSize),
+          ? DoubleArrowFactory() 
+          : ArrowFactory(),
         drawOnce: false,
         paint: Paint()
           ..color = _arrowColor
           ..strokeWidth = _strokeWidth
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round,
+      ),
+      arrow: ArrowSettings(
+        minimumLength: 32.0,
+        outlineEnabled: _outlineEnabled,
+        outlineColor: _outlineColor,
+        outlineWidth: _outlineWidth,
+        arrowHeadSize: _arrowHeadSize,
+      ),
+    );
+  }
+
+  void _updateAnchorPointSettings() {
+    _controller.settings = _controller.settings.copyWith(
+      object: _controller.settings.object.copyWith(
+        anchorPoint: AnchorPointSettings(
+          size: _anchorPointSize,
+          color: _anchorPointColor,
+          borderColor: _anchorPointBorderColor,
+          borderWidth: _anchorPointBorderWidth,
+        ),
       ),
     );
   }
@@ -148,7 +192,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
           ),
           // Controls
           Container(
-            height: 300, // Fixed height for the controls panel
+            height: 450, // Fixed height for the controls panel
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -277,6 +321,80 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                     Text(_arrowHeadSize.toStringAsFixed(1)),
                   ],
                 ),
+                const SizedBox(height: 16),
+                // Arrow Outline Settings
+                Row(
+                  children: [
+                    const Text('Outline Enabled: '),
+                    Switch(
+                      value: _outlineEnabled,
+                      onChanged: (value) {
+                        setState(() {
+                          _outlineEnabled = value;
+                          _updateArrowSettings();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                if (_outlineEnabled) ...[
+                  const SizedBox(height: 8),
+                  // Outline Color
+                  Row(
+                    children: [
+                      const Text('Outline Color: '),
+                      const SizedBox(width: 16),
+                      ...[ Colors.white, Colors.black, Colors.red, Colors.blue, Colors.green, Colors.orange, Colors.purple, ].map((color) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _outlineColor = color;
+                                  _updateArrowSettings();
+                                });
+                              },
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  border: Border.all(
+                                    color: _outlineColor == color
+                                        ? Colors.red
+                                        : Colors.grey,
+                                    width: _outlineColor == color ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Outline Width
+                  Row(
+                    children: [
+                      const Text('Outline Width: '),
+                      Expanded(
+                        child: Slider(
+                          value: _outlineWidth,
+                          min: 1.0,
+                          max: 5.0,
+                          divisions: 4,
+                          label: _outlineWidth.toStringAsFixed(1),
+                          onChanged: (value) {
+                            setState(() {
+                              _outlineWidth = value;
+                              _updateArrowSettings();
+                            });
+                          },
+                        ),
+                      ),
+                      Text(_outlineWidth.toStringAsFixed(1)),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
                 // Debug Information
                 ValueListenableBuilder<PainterControllerValue>(
