@@ -41,6 +41,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
   Color _anchorPointColor = Colors.white;
   Color _anchorPointBorderColor = Colors.grey;
   double _anchorPointBorderWidth = 2.0;
+  double _anchorPointActionAreaPadding = 24.0;
 
   // Arrow outline settings
   bool _outlineEnabled = true;
@@ -61,6 +62,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
             color: _anchorPointColor,
             borderColor: _anchorPointBorderColor,
             borderWidth: _anchorPointBorderWidth,
+            actionAreaPadding: _anchorPointActionAreaPadding,
           ),
         ),
         shape: ShapeSettings(
@@ -120,6 +122,7 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
           color: _anchorPointColor,
           borderColor: _anchorPointBorderColor,
           borderWidth: _anchorPointBorderWidth,
+          actionAreaPadding: _anchorPointActionAreaPadding,
         ),
       ),
     );
@@ -395,6 +398,29 @@ class _ArrowPainterDemoState extends State<ArrowPainterDemo> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 16),
+                // Anchor Point Action Area
+                Row(
+                  children: [
+                    const Text('Anchor Action Area: '),
+                    Expanded(
+                      child: Slider(
+                        value: _anchorPointActionAreaPadding,
+                        min: 16.0,
+                        max: 40.0,
+                        divisions: 12,
+                        label: _anchorPointActionAreaPadding.toStringAsFixed(0),
+                        onChanged: (value) {
+                          setState(() {
+                            _anchorPointActionAreaPadding = value;
+                            _updateAnchorPointSettings();
+                          });
+                        },
+                      ),
+                    ),
+                    Text('${_anchorPointActionAreaPadding.toStringAsFixed(0)}px'),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 // Debug Information
                 ValueListenableBuilder<PainterControllerValue>(

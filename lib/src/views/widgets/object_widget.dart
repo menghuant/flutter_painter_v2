@@ -584,8 +584,8 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
             return [
               // Start point anchor with GestureDetector
               Positioned(
-                left: startPosition.dx - anchorSettings.size,
-                top: startPosition.dy - anchorSettings.size,
+                left: startPosition.dx - (anchorSettings.size + anchorSettings.actionAreaPadding) / 2,
+                top: startPosition.dy - (anchorSettings.size + anchorSettings.actionAreaPadding) / 2,
                 child: GestureDetector(
                   onPanStart: (details) => _onAnchorPanStart(
                       MapEntry(entry.key, drawable), 'start', details),
@@ -594,8 +594,8 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                   onPanEnd: (details) => _onAnchorPanEnd(
                       MapEntry(entry.key, drawable), 'start', details),
                   child: Container(
-                    width: anchorSettings.size + 16, // Action area
-                    height: anchorSettings.size + 16,
+                    width: anchorSettings.size + anchorSettings.actionAreaPadding, // Action area
+                    height: anchorSettings.size + anchorSettings.actionAreaPadding,
                     alignment: Alignment.center,
                     child: _AnchorPoint(settings: anchorSettings),
                   ),
@@ -603,8 +603,8 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
               ),
               // End point anchor with GestureDetector
               Positioned(
-                left: endPosition.dx - anchorSettings.size,
-                top: endPosition.dy - anchorSettings.size,
+                left: endPosition.dx - (anchorSettings.size + anchorSettings.actionAreaPadding) / 2,
+                top: endPosition.dy - (anchorSettings.size + anchorSettings.actionAreaPadding) / 2,
                 child: GestureDetector(
                   onPanStart: (details) => _onAnchorPanStart(
                       MapEntry(entry.key, drawable), 'end', details),
@@ -613,8 +613,8 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
                   onPanEnd: (details) => _onAnchorPanEnd(
                       MapEntry(entry.key, drawable), 'end', details),
                   child: Container(
-                    width: anchorSettings.size + 16, // Action area
-                    height: anchorSettings.size + 16,
+                    width: anchorSettings.size + anchorSettings.actionAreaPadding, // Action area
+                    height: anchorSettings.size + anchorSettings.actionAreaPadding,
                     alignment: Alignment.center,
                     child: _AnchorPoint(settings: anchorSettings),
                   ),
@@ -696,6 +696,7 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
         point: localPosition,
         anchorCenter: anchorPositions['start']!,
         anchorSize: anchorSize,
+        actionAreaPadding: settings.anchorPoint.actionAreaPadding,
       )) {
         // Don't start body dragging, anchor drag will handle it
         return;
@@ -706,6 +707,7 @@ class _ObjectWidgetState extends State<_ObjectWidget> {
         point: localPosition,
         anchorCenter: anchorPositions['end']!,
         anchorSize: anchorSize,
+        actionAreaPadding: settings.anchorPoint.actionAreaPadding,
       )) {
         // Don't start body dragging, anchor drag will handle it
         return;

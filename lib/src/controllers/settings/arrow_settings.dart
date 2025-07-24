@@ -10,11 +10,11 @@ class ArrowSettings {
   /// The minimum length for arrows in logical pixels.
   ///
   /// This constraint ensures that arrows maintain a minimum size for proper
-  /// interaction and visual clarity. The default value of 32.0 corresponds
-  /// to the anchor action area diameter (anchor size + 16 pixels) to prevent
-  /// anchor overlap during interaction.
+  /// interaction and visual clarity. The default value of 40.0 is designed
+  /// to prevent anchor action areas from overlapping during interaction.
+  /// The action area diameter is calculated as: anchor size + actionAreaPadding.
   ///
-  /// Defaults to 32.0.
+  /// Defaults to 40.0.
   final double minimumLength;
 
   /// Whether to enable outline rendering for arrows.
